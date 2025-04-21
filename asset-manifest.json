@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/botbuid/static/css/main.f855e6bc.css",
+    "main.js": "/botbuid/static/js/main.a5d46708.js",
+    "static/js/453.52e1f0e5.chunk.js": "/botbuid/static/js/453.52e1f0e5.chunk.js",
+    "index.html": "/botbuid/index.html",
+    "main.f855e6bc.css.map": "/botbuid/static/css/main.f855e6bc.css.map",
+    "main.a5d46708.js.map": "/botbuid/static/js/main.a5d46708.js.map",
+    "453.52e1f0e5.chunk.js.map": "/botbuid/static/js/453.52e1f0e5.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.f855e6bc.css",
+    "static/js/main.a5d46708.js"
+  ]
+}
