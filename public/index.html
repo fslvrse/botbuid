@@ -1,43 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
-
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bot Battlr</title>
+  <style>
+    /* Add your custom CSS styles here */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .bot-list, .army-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    
+    .bot-card, .army-card {
+      background-color: #f1f1f1;
+      padding: 20px;
+      text-align: center;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    .bot-card.selected, .army-card {
+      background-color: #e0e0e0;
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    
+    .filter-sort {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bot Battlr</h1>
+    
+    <div class="controls">
+      <div class="filter-sort">
+        <input type="text" id="filter-input" placeholder="Filter by name" />
+        <select id="sort-select">
+          <option value="">Sort by</option>
+          <option value="name">Name</option>
+          <option value="health">Health</option>
+          <option value="damage">Damage</option>
+        </select>
+      </div>
+      <button id="clear-army">Clear Army</button>
+    </div>
+    
+    <div class="bot-list"></div>
+    
+    <h2>Your Army</h2>
+    <div class="army-list"></div>
+    
+    <div id="bot-details" style="display: none;">
+      <h2>Bot Details</h2>
+      <p>Name: <span id="bot-name"></span></p>
+      <p>Health: <span id="bot-health"></span></p>
+      <p>Damage: <span id="bot-damage"></span></p>
+      <p>Attacks: <span id="bot-attacks"></span></p>
+      <p>Special Ability: <span id="bot-special"></span></p>
+      <button id="remove-bot">Remove from Army</button>
+    </div>
+  </div>
+  
+  <script>
+    const botList = document.querySelector('.bot-list');
+    const armyList = document.querySelector('.army-list');
+    const botDetailsDiv = document.getElementById('bot-details');
+    const botNameSpan = document.getElementById('bot-name');
+    const botHealthSpan = document.getElementById('bot-health');
+    const botDamageSpan = document.getElementById('bot-damage');
+    const botAttacksSpan = document.getElementById('bot-attacks');
+    const botSpecialSpan = document.getElementById('bot-special');
+    const removeButton = document.getElementById('remove-bot');
+    const filterInput = document.getElementById('filter-input');
+    const sortSelect = document.getElementById('sort-select');
+    const clearArmyButton = document.getElementById('clear-army');
+    
+    let selectedBot = null;
+    let army = [];
+    
+    // Fetch bot data and render the bot list
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then(response => response.json())
+      .then(data => {
+        data.forEach(bot => {
+          const botCard = createBotCard(bot);
+          botList.appendChild(botCard);
+        });
+        
+        // Add event listeners for bot selection and army management
+        addBotSelectionListeners();
+        addArmyManagementListeners();
+        addFilterAndSortListeners();
+        addClearArmyListener();
+      });
+    
+    function createBotCard(bot) {
+      const botCard = document.createElement('div');
+      botCard.classList.add('bot-card');
+      botCard.dataset.id = bot.id;
+      botCard.textContent = bot.name;
+      return botCard;
+    }
+    
+    function addBotSelectionListeners() {
+      const botCards = document.querySelectorAll('.bot-card');
+      botCards.forEach(botCard => {
+        botCard.addEventListener('click', () => {
+          const botId = botCard.dataset.id;
+          const selectedBot = army.find(bot => bot.id === parseInt(botId));
+          
+          if (selectedBot) {
+            // Bot is already in the army, display its details
+            displayBotDetails(selectedBot);
+          } else {
+            // Bot is not in the army, select it
+            selectBot(botCard);
+          }
+        });
+      });
+    }
+    
+    function selectBot(botCard) {
+      // Deselect previously selected bot
+      const previouslySelectedBot = document.querySelector('.bot-card.selected');
+      if (previouslySelectedBot) {
+        previouslySelectedBot.classList.remove('selected');
+      }
+      
+      // Select the new bot
+      botCard.classList.add('selected');
+      selectedBot = army.find(bot => bot.id === parseInt(botCard.dataset.id)) || null;
+      
+      if (selectedBot) {
+        // Bot is already in the army, display its details
+        displayBotDetails(selectedBot);
+      } else {
+        // Bot is not in the army, hide the details
+        hideBotDetails();
+      }
+    }
+    
+    function addArmyManagementListeners() {
+      const botCards = document.querySelectorAll('.bot-card');
+      botCards.forEach(botCard => {
+        botCard.addEventListener('click', () => {
+          const botId = botCard.dataset.id;
+          const selectedBot = army.find(bot => bot.id === parseInt(botId));
+          
+          if (selectedBot) {
+            // Bot is already in the army, remove it
+            removeFromArmy(selectedBot);
+          } else {
+            // Bot is not in the army, add it
+            addToArmy(botCard);
+          }
+        });
+      });
+      
+      removeButton.addEventListener('click', () => {
+        if (selectedBot) {
+          removeFromArmy(selectedBot);
+        }
+      });
+    }
+    
+    function addToArmy(botCard) {
+      // Find the bot data from the API response
+      const botId = botCard.dataset.id;
+      const botData = data.find(bot => bot.id === parseInt(botId));
+      
+      // Add the bot to the army
+      army.push(botData);
+      
+      // Create a new army card and add it to the list
+      const armyCard = createArmyCard(botData);
+      armyList.appendChild(armyCard);
+      
+      // Select the new bot
+      selectBot(botCard);
+    }
+    
+    function removeFromArmy(bot) {
+      // Remove the bot from the army
+      army = army.filter(b => b.id !== bot.id);
+      
+      // Remove the army card from the list
+      const armyCard = document.querySelector(`.army-card[data-id="${bot.id}"]`);
+      armyCard.remove();
+      
+      // Deselect the bot
+      const botCard = document.querySelector(`.bot-card[data-id="${bot.id}"]`);
+      botCard.classList.remove('selected');
+      selectedBot = null;
+      hideBotDetails();
+    }
+    
+    function createArmyCard(bot) {
+      const armyCard = document.createElement('div');
+      armyCard.classList.add('army-card');
+      armyCard.dataset.id = bot.id;
+      armyCard.textContent = bot.name;
+      return armyCard;
+    }
+    
+    function displayBotDetails(bot) {
+      botNameSpan.textContent = bot.name;
+      botHealthSpan.textContent = bot.company.bs;
+      botDamageSpan.textContent = bot.company.catchPhrase;
+      botAttacksSpan.textContent = bot.address.city;
+      botSpecialSpan.textContent = bot.address.street;
+      botDetailsDiv.style.display = 'block';
+    }
+    
+    function hideBotDetails() {
+      botDetailsDiv.style.display = 'none';
+    }
+    
+    function addFilterAndSortListeners() {
+      filterInput.addEventListener('input', () => {
+        filterBots();
+      });
+      
+      sortSelect.addEventListener('change', () => {
+        sortBots();
+      });
+    }
+    
+    function filterBots() {
+      const filterValue = filterInput.value.toLowerCase();
+      const filteredBots = data.filter(bot => bot.name.toLowerCase().includes(filterValue));
+      
+      // Clear the bot list
+      botList.innerHTML = '';
+      
+      // Render the filtered bots
+      filteredBots.forEach(bot => {
+        const botCard = createBotCard(bot);
+        botList.appendChild(botCard);
+      });
+      
+      // Update the bot selection listeners
+      addBotSelectionListeners();
+    }
+    
+    function sortBots() {
+      const sortBy = sortSelect.value;
+      let sortedData = [...data];
+      
+      if (sortBy === 'name') {
+        sortedData.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sortBy === 'health') {
+        sortedData.sort((a, b) => a.company.bs - b.company.bs);
+      } else if (sortBy === 'damage') {
+        sortedData.sort((a, b) => a.company.catchPhrase - b.company.catchPhrase);
+      }
+      
+      // Clear the bot list
+      botList.innerHTML = '';
+      
+      // Render the sorted bots
+      sortedData.forEach(bot => {
+        const botCard = createBotCard(bot);
+        botList.appendChild(botCard);
+      });
+      
+      // Update the bot selection listeners
+      addBotSelectionListeners();
+    }
+    
+    function addClearArmyListener() {
+      clearArmyButton.addEventListener('click', () => {
+        // Clear the army
+        army = [];
+        armyList.innerHTML = '';
+        
+        // Deselect any selected bot
+        const selectedBotCard = document.querySelector('.bot-card.selected');
+        if (selectedBotCard) {
+          selectedBotCard.classList.remove('selected');
+        }
+        selectedBot = null;
+        hideBotDetails();
+      });
+    }
+  </script>
+</body>
 </html>
